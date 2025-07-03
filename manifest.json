@@ -1,0 +1,64 @@
+{
+  "name": "php-class-diagram",
+  "version": "0.0.0",
+  "description": "Generate PlantUML class diagram from PHP source directories (read‑only). Intended for LLM agents to analyse structure, detect design smells, or document architecture.",
+  "tags": ["php", "uml", "class-diagram", "architecture-analysis"],
+
+  "entry_point": "php bin/handler.php",
+  "runtime": "php >=8.1",
+  "timeout_seconds": 90,
+  "streaming": true,
+  "side_effects": "none",
+
+  "input_schema": {
+    "type": "object",
+    "required": ["directory"],
+    "properties": {
+      "directory": {
+        "type": "string",
+        "description": "Absolute or workspace‑relative path to the PHP project root to analyse."
+      },
+      "exclude": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Optional glob patterns to exclude paths."
+      },
+      "depth": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Optional maximum nesting depth (0 = unlimited)."
+      }
+    }
+  },
+
+  "output_schema": {
+    "type": "object",
+    "required": ["plantuml"],
+    "properties": {
+      "plantuml": {
+        "type": "string",
+        "description": "PlantUML class diagram script representing classes, interfaces, traits and their relationships."
+      },
+      "classCount": { "type": "integer" },
+      "interfaceCount": { "type": "integer" }
+    }
+  },
+
+  "auto_activation_hints": {
+    "trigger_keywords": [
+      "class diagram",
+      "PlantUML",
+      "UML class diagram",
+      "architecture diagram",
+      "dependency graph",
+      "circular dependency",
+      "SOLID violation",
+      "refactor classes",
+      "inheritance hierarchy",
+      "impact analysis",
+      "change propagation",
+      "ripple effect"
+    ],
+    "purpose_summary": "Use when a structural or dependency-level overview of a PHP codebase would improve analysis, refactoring, or impact assessment. Particularly useful when estimating what parts of the code may be affected by a class/interface change."
+  }
+}
