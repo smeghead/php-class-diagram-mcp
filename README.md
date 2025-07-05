@@ -1,5 +1,9 @@
 # php-class-diagram-mcp
 
+[![Tests](https://github.com/smeghead/php-class-diagram-mcp/actions/workflows/tests.yml/badge.svg)](https://github.com/smeghead/php-class-diagram-mcp/actions/workflows/tests.yml)
+[![PHP Version](https://img.shields.io/badge/php-8.1%2B-blue.svg)](https://php.net/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 MCP (Model Context Protocol) wrapper for [php-class-diagram](https://github.com/smeghead/php-class-diagram) tool. This server allows LLM agents to generate PlantUML class diagrams from PHP source code for architecture analysis, refactoring assistance, and documentation.
 
 ## Features
@@ -195,6 +199,29 @@ chmod -R 755 /path/to/your/php/project
 ## Development
 
 ### Testing
+
+Run tests using Composer scripts:
+
+```bash
+# Run all feature tests
+composer test
+
+# Run all tests (including fixtures)
+composer test-all
+
+# Run check (includes tests)
+composer check
+```
+
+Manual test execution:
+
+```bash
+# Run specific test directory
+php tests/single-file-unit-test.php tests/feature/
+
+# Run single test file
+php tests/single-file-unit-test.php tests/feature/PhpClassDiagramMCPTest.php
+```
 
 Create test fixtures:
 

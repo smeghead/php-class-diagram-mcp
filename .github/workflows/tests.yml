@@ -1,0 +1,99 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php-version: ['8.1', '8.2', '8.3']
+    
+    name: PHP ${{ matrix.php-version }} Tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-version }}
+        extensions: mbstring, json, curl
+        coverage: none
+    
+    - name: Validate composer.json and composer.lock
+      run: composer validate --strict
+    
+    - name: Cache Composer packages
+      id: composer-cache
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-${{ matrix.php-version }}-
+    
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction
+    
+    - name: Run tests
+      run: composer test
+    
+    - name: Test MCP server directly
+      run: |
+        echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | php bin/handler.php
+        echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"generate_class_diagram","arguments":{"directory":"tests/fixtures/TestProject"}},"id":2}' | php bin/handler.php | grep -q "@startuml"
+
+  security:
+    runs-on: ubuntu-latest
+    name: Security Check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, json, curl
+    
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction
+    
+    - name: Security audit
+      run: composer audit || true  # Don't fail on security issues for now
+
+  compatibility:
+    runs-on: ubuntu-latest
+    name: Compatibility Check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, json, curl
+    
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction
+    
+    - name: Check php-class-diagram availability
+      run: |
+        vendor/bin/php-class-diagram --version
+        vendor/bin/php-class-diagram --help
+    
+    - name: Test with sample PHP project
+      run: |
+        mkdir -p /tmp/test-project
+        echo '<?php class TestClass { public function test() { return "ok"; } }' > /tmp/test-project/Test.php
+        vendor/bin/php-class-diagram /tmp/test-project | grep -q "@startuml"

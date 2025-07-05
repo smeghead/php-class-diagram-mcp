@@ -18,5 +18,13 @@
             "name": "smeghead",
             "email": "smeghead7@gmail.com"
         }
-    ]
+    ],
+    "scripts": {
+        "test": "php tests/single-file-unit-test.php tests/feature/",
+        "test-all": "php tests/single-file-unit-test.php tests/",
+        "test-watch": "@test",
+        "check": [
+            "@test"
+        ]
+    }
 }
