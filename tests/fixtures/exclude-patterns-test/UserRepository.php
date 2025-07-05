@@ -1,6 +1,6 @@
 <?php
 
-namespace TestProject;
+namespace ExcludePatternsTest;
 
 interface UserRepositoryInterface
 {

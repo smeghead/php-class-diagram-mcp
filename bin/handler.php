@@ -12,14 +12,15 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
  * 
  * Provides a JSON-RPC 2.0 interface to generate PlantUML class diagrams
  * from PHP source directories using the php-class-diagram tool.
+ * Supports JSONL (JSON Lines) format for agent compatibility.
  */
 class PhpClassDiagramMCPServer
 {
-    private const TIMEOUT_SECONDS = 90;
     private const DEFAULT_ID = 1;
+    private const TIMEOUT_SECONDS = 90;
     
     private array $config;
-    
+
     public function __construct()
     {
         $this->config = [
@@ -30,29 +31,56 @@ class PhpClassDiagramMCPServer
     
     /**
      * Main entry point for handling MCP requests
+     * Supports both single JSON messages and JSONL (JSON Lines) format
      */
     public function handleRequest(): void
     {
-        try {
-            $input = $this->readStdinInput();
-            $request = $this->parseJsonRpcRequest($input);
-            $response = $this->processRequest($request);
-            $this->sendJsonRpcResponse($response, $request['id'] ?? self::DEFAULT_ID);
-        } catch (Exception $e) {
-            $this->sendJsonRpcError($e, self::DEFAULT_ID);
+        $buffer = '';
+        
+        while (($line = fgets(STDIN)) !== false) {
+            $buffer .= $line;
+            
+            // Try to parse complete JSON messages from buffer
+            $this->processBufferedMessages($buffer);
+        }
+        
+        // Process any remaining complete message in buffer
+        if (trim($buffer) !== '') {
+            $this->processBufferedMessages($buffer);
         }
     }
     
     /**
-     * Read input from STDIN
+     * Process complete JSON messages from buffer
      */
-    private function readStdinInput(): string
+    private function processBufferedMessages(string &$buffer): void
     {
-        $input = '';
-        while (($line = fgets(STDIN)) !== false) {
-            $input .= $line;
+        $lines = explode("\n", $buffer);
+        $buffer = array_pop($lines); // Keep incomplete line in buffer
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            
+            $requestId = self::DEFAULT_ID;
+            try {
+                $request = $this->parseJsonRpcRequest($line);
+                $requestId = $request['id'] ?? self::DEFAULT_ID;
+                $response = $this->processRequest($request);
+                $this->sendJsonRpcResponse($response, $requestId);
+            } catch (Exception $e) {
+                // Try to extract ID from malformed JSON if possible
+                if (!isset($request)) {
+                    $decoded = json_decode($line, true);
+                    if (is_array($decoded) && isset($decoded['id'])) {
+                        $requestId = $decoded['id'];
+                    }
+                }
+                $this->sendJsonRpcError($e, $requestId);
+            }
         }
-        return trim($input);
     }
     
     /**
@@ -86,6 +114,8 @@ class PhpClassDiagramMCPServer
         $params = $request['params'] ?? [];
         
         switch ($method) {
+            case 'initialize':
+                return $this->initialize($params);
             case 'tools/list':
                 return $this->listAvailableTools();
             case 'tools/call':
@@ -93,6 +123,24 @@ class PhpClassDiagramMCPServer
             default:
                 throw new InvalidArgumentException("Unknown method: {$method}");
         }
+    }
+    
+    /**
+     * Handle MCP initialization
+     */
+    private function initialize(array $params): array
+    {
+        // Basic MCP initialization response
+        return [
+            'protocolVersion' => '2024-11-05',
+            'capabilities' => [
+                'tools' => true
+            ],
+            'serverInfo' => [
+                'name' => 'php-class-diagram-mcp',
+                'version' => '1.0.0'
+            ]
+        ];
     }
     
     /**
@@ -282,7 +330,7 @@ class PhpClassDiagramMCPServer
             'id' => $id
         ];
         
-        echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
     }
     
     /**
@@ -311,7 +359,7 @@ class PhpClassDiagramMCPServer
             'id' => $id
         ];
         
-        echo json_encode($error, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        echo json_encode($error, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
     }
 }
 

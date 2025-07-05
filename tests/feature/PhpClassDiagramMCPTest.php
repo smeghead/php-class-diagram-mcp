@@ -33,7 +33,7 @@ class PhpClassDiagramMCPTest extends TestCase {
     public function testToolCallWithValidDirectory() {
         // Arrange
         $server = new PhpClassDiagramMCPServer();
-        $testDir = __DIR__ . '/../fixtures/TestProject';
+        $testDir = __DIR__ . '/../fixtures/exclude-patterns-test';
         $request = [
             'jsonrpc' => '2.0',
             'method' => 'tools/call',
@@ -187,6 +187,103 @@ class PhpClassDiagramMCPTest extends TestCase {
         // Act & Assert
         $this->expectExceptionMessage('Unknown tool: unknown_tool');
         $this->invokePrivateMethod($server, 'callTool', [$params]);
+    }
+    
+    public function testJsonlProcessing() {
+        // Test JSONL processing with buffered messages
+        $server = new PhpClassDiagramMCPServer();
+        
+        // Create a test buffer with multiple JSON messages
+        $buffer = '{"jsonrpc":"2.0","method":"tools/list","id":1}' . "\n" .
+                  '{"jsonrpc":"2.0","method":"tools/list","id":2}' . "\n";
+        
+        // Capture output
+        ob_start();
+        $this->invokePrivateMethod($server, 'processBufferedMessages', [&$buffer]);
+        $output = ob_get_clean();
+        
+        // Should process both messages and send responses
+        $this->assertSame(true, strpos($output, '"id":1') !== false, 'Should process first message');
+        $this->assertSame(true, strpos($output, '"id":2') !== false, 'Should process second message');
+        
+        // Buffer should be empty after processing complete lines
+        $this->assertSame('', $buffer, 'Buffer should be empty after processing complete messages');
+    }
+    
+    public function testPartialJsonlBuffering() {
+        // Test that incomplete JSON messages remain in buffer
+        $server = new PhpClassDiagramMCPServer();
+        
+        // Create a buffer with incomplete message
+        $buffer = '{"jsonrpc":"2.0","method":"tools/list","id":1}' . "\n" .
+                  '{"jsonrpc":"2.0","method":"tools/list"';  // incomplete
+        
+        // Capture output
+        ob_start();
+        $this->invokePrivateMethod($server, 'processBufferedMessages', [&$buffer]);
+        $output = ob_get_clean();
+        
+        // Should process complete message only
+        $this->assertSame(true, strpos($output, '"id":1') !== false, 'Should process complete message');
+        
+        // Incomplete message should remain in buffer
+        $this->assertSame('{"jsonrpc":"2.0","method":"tools/list"', $buffer, 'Incomplete message should remain in buffer');
+    }
+    
+    public function testJsonlRegressionTestWithFixtures() {
+        // Integration test using fixtures to prevent regression
+        $jsonlInputFile = __DIR__ . '/../fixtures/test-jsonl-input.txt';
+        $this->assertSame(true, file_exists($jsonlInputFile), 'JSONL test fixture must exist');
+        
+        // Read the JSONL input
+        $jsonlInput = file_get_contents($jsonlInputFile);
+        $this->assertSame(true, !empty($jsonlInput), 'JSONL input must not be empty');
+        
+        // Execute the MCP server with the JSONL input
+        $command = 'cd ' . dirname(__DIR__, 2) . ' && echo ' . escapeshellarg($jsonlInput) . ' | php bin/handler.php';
+        $output = shell_exec($command);
+        
+        // Parse the output lines
+        $lines = array_filter(explode("\n", trim($output)));
+        $this->assertSame(3, count($lines), 'Should return exactly 3 responses');
+        
+        // Verify each response
+        $responses = array_map('json_decode', $lines);
+        
+        // Response 1: Initialize
+        $this->assertSame('2.0', $responses[0]->jsonrpc, 'First response should be valid JSON-RPC 2.0');
+        $this->assertSame(1, $responses[0]->id, 'First response should have ID 1');
+        $this->assertSame('2024-11-05', $responses[0]->result->protocolVersion, 'Should return correct protocol version');
+        
+        // Response 2: Tools list
+        $this->assertSame(2, $responses[1]->id, 'Second response should have ID 2');
+        $this->assertSame(true, isset($responses[1]->result->tools), 'Should contain tools list');
+        $this->assertSame('generate_class_diagram', $responses[1]->result->tools[0]->name, 'Should contain class diagram tool');
+        
+        // Response 3: Class diagram generation
+        $this->assertSame(3, $responses[2]->id, 'Third response should have ID 3');
+        $this->assertSame(true, isset($responses[2]->result->content), 'Should contain diagram content');
+        $this->assertSame('text', $responses[2]->result->content[0]->type, 'Content should be text type');
+        $this->assertSame(true, strpos($responses[2]->result->content[0]->text, '@startuml') !== false, 'Should contain PlantUML start tag');
+    }
+    
+    public function testFixtureTestProjectExists() {
+        // Ensure test project fixture exists for regression testing
+        $testProjectDir = __DIR__ . '/../fixtures/jsonl-integration-test';
+        $this->assertSame(true, is_dir($testProjectDir), 'JSONL integration test fixture directory must exist');
+        
+        $userFile = $testProjectDir . '/User.php';
+        $repoFile = $testProjectDir . '/UserRepository.php';
+        
+        $this->assertSame(true, file_exists($userFile), 'User.php fixture must exist');
+        $this->assertSame(true, file_exists($repoFile), 'UserRepository.php fixture must exist');
+        
+        // Verify file contents contain expected PHP code
+        $userContent = file_get_contents($userFile);
+        $this->assertSame(true, strpos($userContent, 'class User') !== false, 'User.php should contain User class');
+        
+        $repoContent = file_get_contents($repoFile);
+        $this->assertSame(true, strpos($repoContent, 'class UserRepository') !== false, 'UserRepository.php should contain UserRepository class');
     }
     
     /**

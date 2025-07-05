@@ -1,6 +1,6 @@
 <?php
 
-namespace TestProject\Events;
+namespace ExcludePatternsTest\Events;
 
 interface EventInterface
 {

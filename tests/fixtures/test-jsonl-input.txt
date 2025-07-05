@@ -1,0 +1,3 @@
+{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{"roots":{"listChanged":true},"sampling":{}}},"id":1}
+{"jsonrpc":"2.0","method":"tools/list","id":2}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"generate_class_diagram","arguments":{"directory":"tests/fixtures/jsonl-integration-test","exclude":["*.test.php"],"depth":2}},"id":3}
