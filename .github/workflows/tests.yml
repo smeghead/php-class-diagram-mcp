@@ -61,7 +61,7 @@ jobs:
         
         # Test class diagram generation
         echo "Testing class diagram generation..."
-        diagram_output=$(echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"generate_class_diagram","arguments":{"directory":"tests/fixtures/TestProject"}},"id":2}' | php bin/handler.php)
+        diagram_output=$(echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"generate_class_diagram","arguments":{"directory":"tests/fixtures/exclude-patterns-test"}},"id":2}' | php bin/handler.php)
         echo "Diagram output: $diagram_output"
         
         if echo "$diagram_output" | grep -q "@startuml"; then
