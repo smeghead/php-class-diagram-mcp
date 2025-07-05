@@ -47,8 +47,30 @@ jobs:
     
     - name: Test MCP server directly
       run: |
-        echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | php bin/handler.php
-        echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"generate_class_diagram","arguments":{"directory":"tests/fixtures/TestProject"}},"id":2}' | php bin/handler.php | grep -q "@startuml"
+        # Test tools/list endpoint
+        echo "Testing tools/list..."
+        tools_output=$(echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | php bin/handler.php)
+        echo "Tools output: $tools_output"
+        
+        if echo "$tools_output" | grep -q "generate_class_diagram"; then
+          echo "✓ tools/list working"
+        else
+          echo "✗ tools/list failed"
+          exit 1
+        fi
+        
+        # Test class diagram generation
+        echo "Testing class diagram generation..."
+        diagram_output=$(echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"generate_class_diagram","arguments":{"directory":"tests/fixtures/TestProject"}},"id":2}' | php bin/handler.php)
+        echo "Diagram output: $diagram_output"
+        
+        if echo "$diagram_output" | grep -q "@startuml"; then
+          echo "✓ Class diagram generation working"
+        else
+          echo "✗ Class diagram generation failed"
+          echo "Full output: $diagram_output"
+          exit 1
+        fi
 
   security:
     runs-on: ubuntu-latest
@@ -89,11 +111,83 @@ jobs:
     
     - name: Check php-class-diagram availability
       run: |
-        vendor/bin/php-class-diagram --version
-        vendor/bin/php-class-diagram --help
+        # Check if binary exists
+        ls -la vendor/bin/php-class-diagram
+        
+        # Test version command (outputs to stderr with exit code 255)
+        version_output=$(vendor/bin/php-class-diagram --version 2>&1 || true)
+        echo "Version output: $version_output"
+        
+        if echo "$version_output" | grep -q "php-class-diagram v"; then
+          echo "✓ php-class-diagram --version works (stderr output detected)"
+        else
+          echo "✗ php-class-diagram --version failed"
+          echo "Full version output: $version_output"
+          exit 1
+        fi
+        
+        # Test help command (also exits with non-zero code)
+        help_output=$(vendor/bin/php-class-diagram --help 2>&1 || true)
+        if echo "$help_output" | grep -q "usage:"; then
+          echo "✓ php-class-diagram --help works"
+        else
+          echo "✗ php-class-diagram --help failed"
+          exit 1
+        fi
+        
+        # Test with a simple directory
+        mkdir -p /tmp/test-simple
+        echo '<?php class SimpleTest { }' > /tmp/test-simple/Simple.php
+        
+        simple_output=$(vendor/bin/php-class-diagram /tmp/test-simple 2>&1)
+        if echo "$simple_output" | grep -q "@startuml"; then
+          echo "✓ php-class-diagram basic execution works"
+        else
+          echo "✗ php-class-diagram basic execution failed"
+          echo "Output: $simple_output"
+          exit 1
+        fi
     
     - name: Test with sample PHP project
       run: |
+        # Create a more comprehensive test project
         mkdir -p /tmp/test-project
-        echo '<?php class TestClass { public function test() { return "ok"; } }' > /tmp/test-project/Test.php
-        vendor/bin/php-class-diagram /tmp/test-project | grep -q "@startuml"
+        cat > /tmp/test-project/User.php << 'EOF'
+<?php
+class User {
+    private string $name;
+    private string $email;
+    
+    public function __construct(string $name, string $email) {
+        $this->name = $name;
+        $this->email = $email;
+    }
+    
+    public function getName(): string {
+        return $this->name;
+    }
+}
+EOF
+        
+        # Test php-class-diagram generates output
+        echo "Testing php-class-diagram output..."
+        output=$(vendor/bin/php-class-diagram /tmp/test-project 2>&1)
+        echo "Generated output:"
+        echo "$output"
+        
+        # Verify PlantUML output
+        if echo "$output" | grep -q "@startuml"; then
+          echo "✓ PlantUML start tag found"
+        else
+          echo "✗ PlantUML start tag not found"
+          echo "Full output: $output"
+          exit 1
+        fi
+        
+        if echo "$output" | grep -q "@enduml"; then
+          echo "✓ PlantUML end tag found"
+        else
+          echo "✗ PlantUML end tag not found"
+          echo "Full output: $output"
+          exit 1
+        fi
