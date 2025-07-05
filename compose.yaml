@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-    working_dir: /usr/src
+    working_dir: /app
     volumes:
       - ./php.ini:/etc/php/8.1/cli/conf.d/php.ini
-      - ./:/usr/src
+      - ./:/app

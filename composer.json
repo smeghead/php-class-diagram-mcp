@@ -3,7 +3,9 @@
     "description": "php-class-diagram MCP server",
     "type": "project",
     "require": {
-        "smeghead/php-class-diagram": "^1.5"
+        "php": ">=8.1",
+        "smeghead/php-class-diagram": "^1.5",
+        "symfony/process": "^6.0|^7.0"
     },
     "license": "Apache-2.0",
     "autoload": {

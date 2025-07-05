@@ -127,9 +127,7 @@
       "plantuml": {
         "type": "string",
         "description": "PlantUML class diagram script representing classes, interfaces, traits and their relationships."
-      },
-      "classCount": { "type": "integer" },
-      "interfaceCount": { "type": "integer" }
+      }
     }
   },
 
