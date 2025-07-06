@@ -50,6 +50,33 @@ Add this server to your Claude Desktop configuration:
 }
 ```
 
+### GitHub Copilot Agent Configuration
+
+Add this server to your settings.json configuration:
+
+```json
+{
+  "mcp": {
+      "inputs": [
+          {
+              "name": "auto-php-analysis",
+              "description": "Automatically use php-class-diagram MCP server for PHP code analysis tasks",
+              "trigger": ["php", "class", "dependency", "diagram", "structure"]
+          }
+      ],
+      "servers": {
+          "php-class-diagram": {
+              "command": "php",
+              "args": [
+                  "/tmp/php-class-diagram-mcp/bin/handler.php"
+              ],
+              "env": {}
+          }
+      }
+  }
+}
+```
+
 ### Cursor/VS Code with MCP Extension
 
 1. Install an MCP extension that supports external servers
