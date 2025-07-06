@@ -68,7 +68,7 @@ Add this server to your settings.json configuration:
           "php-class-diagram": {
               "command": "php",
               "args": [
-                  "/tmp/php-class-diagram-mcp/bin/handler.php"
+                  "/path/to/php-class-diagram-mcp/bin/handler.php"
               ],
               "env": {}
           }
