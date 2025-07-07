@@ -214,7 +214,11 @@ composer install
 Ensure the target directory has proper read permissions:
 
 ```bash
-chmod -R 755 /path/to/your/php/project
+# Check current permissions first
+ls -la /path/to/your/php/project
+
+# Add read permissions if needed
+find /path/to/your/php/project -exec chmod +r {} \;
 ```
 
 ### Empty output
